@@ -1,119 +1,397 @@
-# VFS Bot — Automação de Agendamentos
+# VFS Bot - Agendador Automático de Vistos
 
+Sistema automatizado para monitorizar disponibilidade de vagas e agendar vistos no site VFS Global Brasil.
 
-Sistema automático para verificar e agendar vistos na plataforma VFS Global (Brasil/Angola).
+## 📋 Índice
 
+- [Requisitos](#requisitos)
+- [Instalação](#instalação)
+- [Configuração](#configuração)
+- [Como Usar](#como-usar)
+- [Componentes](#componentes)
+- [Troubleshooting](#troubleshooting)
 
-## 🎯 Características
+---
 
+## 🔧 Requisitos
 
-- ✅ **Painel web simples** — Interface para operadores não-técnicos
-- ✅ **Automação com Playwright** — Preenche formulários automaticamente
-- ✅ **Múltiplos clientes** — Processa lista de clientes em lote
-- ✅ **Sessão persistente** — Mantém login autenticado
-- ✅ **Monitoramento em tempo real** — Exibe status e últimas mensagens
-- ✅ **Logs detalhados** — Tudo registado em `bot-output/bot.log`
+- **Node.js** 14+ (recomendado: 16 ou superior)
+- **npm** (vem com Node.js)
+- **Google Chrome** ou **Chromium** instalado (opcional, mas recomendado para melhor compatibilidade)
+- **Windows 10+**, **macOS 10.14+**, ou **Linux** (Ubuntu 18+)
 
+---
 
-## 📋 Pré-requisitos
+## 💻 Instalação
 
-
-- Node.js 18+
-- npm ou yarn
-- Credenciais VFS válidas
-
-
-## 🚀 Instalação
-
+### 1. Clonar ou descarregar o projeto
 
 ```bash
-# Clone o repositório
-git clone https://github.com/seu-usuario/VFS.git
-cd VFS/"vfs node"
+cd caminho/do/seu/projeto
+# ou
+git clone <repo-url>
+cd vfs-bot
+```
 
-# Instale dependências
+### 2. Instalar dependências Node.js
+
+```powershell
+npm install
+```
+
+Isto vai instalar:
+- `express` - servidor web para o painel de controle
+- `playwright` - automação de navegador
+- `minimist` - parse de argumentos CLI
+- `cors` - suporte CORS
+- `dotenv` - variáveis de ambiente
+- `nodemailer` - suporte para emails (opcional)
+
+### 3. Instalar navegadores Playwright
+
+```powershell
+npx playwright install chromium
+```
+
+Ou para instalar vários navegadores:
+
+```powershell
+npx playwright install
+```
+
+---
+
+## ⚙️ Configuração
+
+### Passo 1: Editar `clients.json`
+
+Adiciona os clientes que deseja agendar. Exemplo:
+
+```json
+[
+  {
+    "firstName": "João",
+    "lastName": "Silva",
+    "passport": "AA1234567",
+    "phone": "+244923456701",
+    "email": "joao.silva@gmail.com",
+    "dob": "1987-01-23"
+  },
+  {
+    "firstName": "Maria",
+    "lastName": "Santos",
+    "passport": "AB9876543",
+    "phone": "+244923456702",
+    "email": "maria.santos@gmail.com",
+    "dob": "1992-05-14"
+  }
+]
+```
+
+### Passo 2: Editar `config.json`
+
+Configure os seletores CSS e comportamento do bot:
+
+```json
+{
+  "baseUrl": "https://visa.vfsglobal.com/ago/pt/bra/login",
+  "checkUrl": "https://visa.vfsglobal.com/ago/pt/bra/application-detail",
+  "checkIntervalMs": 30000,
+  "outputDir": "bot-output/recibos",
+  "pauseBeforeConfirm": false,
+  "selectors": {
+    "startBooking": "button:has-text(\"Start New Booking\")",
+    "centerSelect": "select[name=\"centre\"]",
+    "serviceSelect": "select[name=\"service\"]",
+    "slotList": ".slot, .time-slot, .available-slot",
+    "bookButton": "button:has-text(\"Reservar\"), button:has-text(\"Book\")",
+    "confirmButton": "button:has-text(\"Confirm\"), button:has-text(\"Pagar\")",
+    "receipt": ".receipt, #receipt",
+    "form": {
+      "name": "#applicantName",
+      "phone": "#phone",
+      "email": "#email"
+    }
+  },
+  "formData": {
+    "center": "Centro de Solicitação de Vistos do Brasil - Luanda",
+    "service": "VITUR - Visto de turista (permanência até 90 dias)"
+  }
+}
+```
+
+**Notas importantes:**
+- `pauseBeforeConfirm: true` — pausa antes de confirmar (útil para testes)
+- `pauseBeforeConfirm: false` — confirma automaticamente (produção)
+- Ajusta os seletores conforme o site mude
+
+---
+
+## 🚀 Como Usar
+
+### Fluxo Recomendado (Passo-a-Passo)
+
+#### **1. Iniciar Painel de Controle** (opcional mas recomendado)
+
+Em um terminal separado:
+
+```powershell
+node server-control.js
+```
+
+Depois acede a: `http://localhost:3000`
+
+O painel mostra:
+- Status do bot
+- Última verificação
+- Screenshots do último agendamento
+- Botões para: Forçar verificação, Pausar, Retomar
+
+---
+
+#### **2. Executar o Bot com Login Manual**
+
+```powershell
+node bot.js
+```
+
+Isto irá:
+- Abrir um navegador (Chrome/Chromium)
+- Navegar para a página de login do VFS
+- **Tu fazes login manualmente** (resolve CAPTCHA, 2FA, etc.)
+- Depois de completar o login, **pressiona ENTER no terminal**
+- O script salva a sessão em `state.json`
+- **Automaticamente executa `fill-clients.js --all=true`** para agendar todos os clientes
+
+---
+
+#### **3. Verificação de Resultados**
+
+Após a execução, verifica:
+
+```powershell
+# Ver diretório dos runs
+Get-ChildItem .\bot-output\fill-runs | Sort-Object Name -Descending | Select-Object -First 5
+
+# Ver resultado de um cliente específico
+Get-Content .\bot-output\fill-runs\<TIMESTAMP>\result.json
+```
+
+Cada execução gera:
+- `result.json` — resultado (sucesso/erro, detalhes)
+- `filled.png` — screenshot do formulário preenchido
+- `receipt.png` — screenshot do recibo (se conseguiu agendar)
+- `error.html` / `console.log` — debug (se houve erro)
+
+---
+
+### Scripts NPM Disponíveis
+
+```powershell
+# Testar preenchimento para 1 cliente (headless)
+npm run fill:one
+
+# Agendar todos os clientes (headless)
+npm run fill:all
+
+# Com modo visível (útil para debug)
+$env:HEADLESS='false'
+npm run fill:one
+```
+
+---
+
+## 📦 Componentes
+
+### `bot.js`
+- Abre navegador com sessão persistente (user-data)
+- Guia login manual do utilizador
+- Salva `state.json` (sessão autenticada)
+- Dispara automaticamente `fill-clients.js --all=true` após login
+
+### `fill-clients.js`
+- Lê `clients.json` e `config.json`
+- Usa sessão (`state.json`) para aceder ao site já autenticado
+- Clica em "Start New Booking"
+- Seleciona centro e serviço
+- Aguarda vagas (até 60s)
+- Preenche formulário e confirma agendamento
+- Captura recibo e salva screenshots
+
+### `server-control.js`
+- Servidor Express na porta 3000
+- API REST para controlar o bot
+- Painel web (HTML + JS)
+- Endpoints:
+  - `GET /status` — estado atual do bot
+  - `POST /force` — força verificação imediata
+  - `POST /pause` — pausa bot
+  - `POST /resume` — retoma bot
+  - `GET /logs` — último logs
+  - `GET /last-result` — último resultado de agendamento
+
+### `web-ui/`
+- Interface web do painel
+- `index.html` — estrutura HTML
+- `main.js` — lógica JS (fetch, atualização de status)
+- `style.css` — estilos
+
+### `config.json`
+- URL do site
+- Seletores CSS (adaptáveis ao site)
+- Dados do formulário
+
+### `clients.json`
+- Lista de clientes para agendar
+- Campos: firstName, lastName, passport, phone, email, dob
+
+### `state.json` (gerado)
+- Sessão autenticada (cookies, tokens)
+- Criado por `bot.js` após login manual
+- Reutilizado por `fill-clients.js`
+
+---
+
+## 🔐 Segurança
+
+### Proteção com Token (Opcional)
+
+Se quiseres proteger os endpoints do painel:
+
+```powershell
+# Define um token antes de rodar server-control.js
+$env:CONTROL_API_TOKEN = 'meu-token-secreto'
+node server-control.js
+```
+
+O painel então exigirá esse token em operações sensíveis (POST).
+
+No painel web, entra o token no campo de "API token" na navbar e clica "Salvar" (fica guardado em localStorage do browser).
+
+---
+
+## 🐛 Troubleshooting
+
+### "No storage state found" ao rodar `fill-clients.js`
+
+**Causa:** Não existe `state.json` (sessão autenticada).
+
+**Solução:**
+```powershell
+# Rodar bot.js para fazer login e gerar state.json
+node bot.js
+# Faz login manualmente e pressiona ENTER
+```
+
+---
+
+### "no slots found" para todos os clientes
+
+**Causas possíveis:**
+- Genuinamente não há vagas disponíveis
+- Site mudou estrutura/seletores CSS
+- Bot não conseguiu clicar em "Start New Booking"
+
+**Solução:**
+```powershell
+# Rodar em modo visível para ver o fluxo real
+$env:HEADLESS='false'
+node fill-clients.js --index=0
+
+# Inspetor do browser (F12) para verificar seletores
+```
+
+Se seletores mudaram, atualiza `config.json` com os novos.
+
+---
+
+### Bot não aguarda vagas por 60s
+
+**Solução:** O bot tenta por até 60s com intervalos de 2s. Se quiseres aumentar, edita `fill-clients.js` e muda a constante `timeoutMs` na função de polling.
+
+---
+
+### Screenshots não aparecem no painel
+
+**Verificar:**
+```powershell
+# Confirma que os screenshots foram salvos
+Get-ChildItem .\bot-output\fill-runs\<TIMESTAMP>\ -Filter *.png
+```
+
+Se existem, verifica em browser:
+- F12 → Console
+- Vê se há erros de CORS ou requisição
+
+---
+
+### Erro "Cannot find module"
+
+```powershell
+# Certifica-te que instalaste dependências
 npm install
 
-# Configure dados sensíveis
-cp clients.json.example clients.json
-# Edite clients.json com seus dados reais
+# Se o erro persiste, reinstala tudo
+rm -r node_modules
+npm install
+```
 
+---
 
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-⚙️ Configuração config.json
+## 📝 Exemplo Completo (End-to-End)
 
-Define os seletores CSS do site VFS e URLs:
-{
-"baseUrl": "https://visa.vfsglobal.com/...",
-"selectors": {
-"form": { "name": "#applicantName", ... }
-}
-}
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-clients.json
-Lista de clientes a agendar:
+```powershell
+# 1. Instalar dependências (primeira vez)
+npm install
+npx playwright install chromium
 
+# 2. Editar clients.json com os teus clientes
+# (já vem com exemplos)
 
-[
-{
-"name": "João Silva",
-"phone": "912345678",
-"email": "joao@example.com"
-}
-]
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# 3. Editar config.json (opcional — já vem configurado)
+# (se o site mudar, atualiza seletores)
 
-🎮 Uso - inicie o servidor (painel web):
+# 4. Iniciar painel (opcional)
 node server-control.js
-# Acesse: http://localhost:3000
+# Acede http://localhost:3000 num outro browser
 
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Texte preenchimento individual - cmd
-HEADLESS=false node fill-clients.js --index=0
+# 5. Iniciar bot com login
+node bot.js
+# Faz login manualmente no navegador que abrir
+# Pressiona ENTER no terminal após login
 
-Texte preenchimento individual - cmd
+# 6. Bot automaticamente tenta agendar todos
+# Vê resultados em bot-output/fill-runs/
+
+# 7. Se quiseres rodar novamente (sem fazer login de novo)
 npm run fill:all
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-📁 Estrutura
+# 8. Consulta status pelo painel
+# http://localhost:3000
+```
 
-├── server-control.js      # Express server + orquestração
-├── bot.js                 # Login manual e session save
-├── fill-clients.js        # Playwright automation
-├── config.json            # Seletores e URLs
-├── clients.json           # Lista de clientes (ignored)
-├── web-ui/                # Frontend estático
-│   ├── index.html
-│   ├── main.js
-│   └── style.css
-└── bot-output/            # Resultados, screenshots, logs
+---
 
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+## 📞 Suporte
 
-⚠️ Segurança
-NUNCA commite:
-clients.json — dados pessoais
-state.json — sessão autenticada
-bot-output — screenshots sensíveis
-.env — tokens/senhas
-Veja .gitignore para lista completa de ficheiros ignorados.
+Se encontrares problemas:
 
-🔍 Troubleshooting
-"No slots found"
+1. **Verifica logs:**
+   ```powershell
+   Get-Content .\bot-output\fill-runs\<TIMESTAMP>\result.json
+   cat .\bot-output\fill-runs\<TIMESTAMP>\error.html
+   ```
 
-Verifique se os seletores CSS em config.json estão corretos
-Inspecione o site com F12 e atualize os seletores
-"Cannot find module" - npm install
+2. **Roda em modo visível** (`HEADLESS=false`) para ver exatamente o que o bot está a fazer
 
-Sessão expirada
+3. **Atualiza seletores** em `config.json` se o site mudou
 
-Delete state.json e playwright-storage.json
-Execute bot.js novamente para fazer login
-📞 Suporte
-Para problemas, verifique:
+---
 
-Logs em bot.log
-Screenshots em bot-output/*/
-Console do navegador (F12)
-📄 Licença
-MIT
+## 📄 Licença
+
+Este projeto é fornecido "tal como está" para fins educacionais e de automação pessoal.
+
+---
+
+**Última atualização:** Dezembro 2025

@@ -1,0 +1,28 @@
+{
+  "baseUrl": "https://visa.vfsglobal.com/ago/pt/bra/login",
+  "checkUrl": "https://visa.vfsglobal.com/ago/pt/bra/application-detail",
+  "checkIntervalMs": 30000,
+  "outputDir": "bot-output/recibos",
+  "pauseBeforeConfirm": false,
+  "selectors": {
+    "startBooking": "button:has-text(\"Start New Booking\"), button:has-text(\"Start Booking\")",
+    "centerSelect": "select[name=\"centre\"], select#centre, select[id*=center]",
+    "serviceSelect": "select[name=\"service\"], select#service, select[id*=service]",
+    "slotList": ".slot, .time-slot, .available-slot",
+    "bookButton": "button:has-text(\"Reservar\"), button:has-text(\"Book\")",
+    "confirmButton": "button:has-text(\"Confirm\"), button:has-text(\"Pagar\"), button[type=\"submit\"]",
+    "receipt": ".receipt, #receipt, text=Recibo",
+    "form": {
+      "name": "#applicantName",
+      "phone": "#phone",
+      "email": "#email"
+    }
+  },
+  "formData": {
+    "name": "NOME DO CLIENTE",
+    "phone": "972960569",
+    "email": "mail@example.com",
+    "center": "Centro de Solicitação de Vistos do Brasil - Luanda",
+    "service": "VITUR - Visto de turista (permanência até 90 dias)"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "vfs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "fill:one": "node fill-clients.js --index=0",
+    "fill:all": "node fill-clients.js --all=true"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "minimist": "^1.2.8",
+    "nodemailer": "^7.0.10",
+    "playwright": "^1.56.1"
+  }
+}
