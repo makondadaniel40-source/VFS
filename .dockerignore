@@ -1,0 +1,8 @@
+# Browser/profile data
+user-data/
+clients.json
+state.json
+playwright-storage.json
+bot-output/
+*.log
+node_modules/
