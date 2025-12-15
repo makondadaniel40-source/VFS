@@ -1,0 +1,52 @@
+{
+  "startUrl": "https://visa.vfsglobal.com/ago/pt/bra/application-detail",
+  "headless": false,
+  "pollInterval": 300000,
+  "heartbeatIntervalMs": 600000,
+  "statePath": "state.json",
+  "outputBase": "bot-output",
+  "login": {
+    "loggedInSelectors": ["a[href*=\"logout\"]", ".dashboard-header", ".minha-conta"],
+    "urlStopContains": ["dashboard", "application-detail"],
+    "maxWait": 120000
+  },
+  "pages": {
+    "checkPage": "https://visa.vfsglobal.com/ago/pt/bra/application-detail"
+  },
+  "slotDetection": {
+    "method": "evaluate",
+    "script": "/* retorna true se houver slot disponível; false se encontrar a mensagem 'Lamentamos...' */\n(function(){\n  try {\n    const body = document.body ? document.body.innerText.toLowerCase() : '';\n    const negatives = [\n      'lamentamos',\n      'não há horários disponíveis',\n      'no appointment slots are currently available',\n      'no appointments available',\n      'nenhum horário disponível'\n    ];\n    for (const n of negatives) if (body.includes(n)) return false; // sem vagas\n    // procura por elementos de slot / calendário / botões ativos\n    const slotSelectors = ['.slot', '.available-slot', '.timeslot', '.slot.available', 'button.confirm', 'button#confirm'];\n    for (const s of slotSelectors) if (document.querySelector(s)) return true;\n    // fallback: se houver palavra 'Confirm' ou 'Continuar' habilitada\n    if (body.includes('confirm') || body.includes('confirmar') || body.includes('continuar')) return true;\n    return false;\n  } catch (e) { return false; }\n})()"
+  },
+  "bookingSteps": [
+    { "action": "wait", "ms": 500 },
+    { "action": "select", "selector": "select[name='centreId'], select#centreSelect, select[id*='centre']", "value": "Centro de Solicitação de Vistos para o Brasil - Luanda" },
+    { "action": "wait", "ms": 300 },
+    { "action": "select", "selector": "select[name='appointmentCategory'], select#categorySelect", "value": "VITUR" },
+    { "action": "wait", "ms": 300 },
+    { "action": "select", "selector": "select[name='appointmentSubCategory'], select#subCategorySelect", "value": "VITUR - Visto de turista (permanência até 90 dias)" },
+    { "action": "wait", "ms": 400 },
+    { "action": "click", "selector": "button#searchDates, button.search-dates, button[aria-label*='Search']" },
+    { "action": "wait", "ms": 1200 },
+    { "action": "click", "selector": ".slot-list .slot.available:first-child, .available-slot:first-child" },
+    { "action": "wait", "ms": 600 },
+    { "action": "fill", "selector": "input[name='firstName'], input#firstName", "valueFrom": "firstName" },
+    { "action": "fill", "selector": "input[name='lastName'], input#lastName", "valueFrom": "lastName" },
+    { "action": "fill", "selector": "input[name='passportNumber'], input#passportNumber", "valueFrom": "passport" },
+    { "action": "fill", "selector": "input[name='phone'], input#phone", "valueFrom": "phone" },
+    { "action": "fill", "selector": "input[name='email'], input#email", "valueFrom": "email" },
+    { "action": "click", "selector": "input[name='consent'], input#agreeTerms, input[type='checkbox']" },
+    { "action": "click", "selector": "button#confirm, button.confirm, button[aria-label*='Confirm']" },
+    { "action": "wait", "ms": 1200 },
+    { "action": "screenshot", "fullPage": false }
+  ],
+  "bookingResult": {
+    "selector": ".confirmation-number, .confirmation, .booking-ref"
+  },
+  "notifications": {
+    "telegram": {
+      "botToken": "YOUR_TELEGRAM_BOT_TOKEN_HERE",
+      "chatId": "YOUR_CHAT_ID"
+    }
+  },
+  "stopOnSuccess": true
+}
